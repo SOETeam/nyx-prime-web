@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Nyx Prime — Web</title>
+<style>
+  :root {
+    --bg: #0a0a12;
+    --bg2: #10101c;
+    --panel: #161627;
+    --panel2: #1d1d33;
+    --neon: #00f0ff;
+    --neon2: #ff2d95;
+    --neon3: #b026ff;
+    --text: #e8e8f4;
+    --muted: #8a8aa3;
+    --green: #39ff88;
+    --red: #ff5c5c;
+    --yellow: #ffd54a;
+    --border: #2a2a44;
+    --shadow: 0 0 18px rgba(0,240,255,.15);
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  html, body { height: 100%; }
+  body {
+    font-family: 'Segoe UI', 'Helvetica Neue', system-ui, sans-serif;
+    background: radial-gradient(circle at 20% 0%, #14142a 0%, var(--bg) 55%);
+    color: var(--text);
+    overflow: hidden;
+  }
+  #app {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    max-width: 480px;
+    margin: 0 auto;
+    border-left: 1px solid var(--border);
+    border-right: 1px solid var(--border);
+    background: var(--bg);
+  }
+  header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 16px;
+    border-bottom: 1px solid var(--border);
+    background: linear-gradient(90deg, var(--bg2), var(--panel));
+  }
+  .logo {
+    width: 36px; height: 36px; border-radius: 50%;
+    background: conic-gradient(var(--neon), var(--neon3), var(--neon2), var(--neon));
+    box-shadow: var(--shadow);
+    flex-shrink: 0;
+    display: grid; place-items: center;
+    font-weight: 900; font-size: 15px; color: #000;
+  }
+  header h1 { font-size: 18px; letter-spacing: 1px; color: var(--neon); text-shadow: 0 0 8px rgba(0,240,255,.5); }
+  header .sub { font-size: 11px; color: var(--muted); letter-spacing: 2px; text-transform: uppercase; }
+  main { flex: 1; overflow-y: auto; padding: 14px 16px; }
+  .tab { display: none; flex-direction: column; height: 100%; }
+  .tab.active { display: flex; }
+  h2.section { font-size: 14px; letter-spacing: 2px; text-transform: uppercase; color: var(--neon); margin-bottom: 12px; display:flex; align-items:center; gap:8px; }
+  h2.section::after { content:""; flex:1; height:1px; background: linear-gradient(90deg,var(--neon),transparent); }
+
+  /* Inputs & buttons */
+  .field {
+    width: 100%;
+    background: var(--panel2);
+    border: 1px solid #3d3d63;
+    border-radius: 10px;
+    color: var(--text);
+    padding: 12px 14px;
+    font-size: 15px;
+    outline: none;
+    transition: border-color .2s, box-shadow .2s;
+  }
+  .field:focus { border-color: var(--neon); box-shadow: 0 0 0 2px rgba(0,240,255,.15); }
+  .field::placeholder { color: #5f5f7a; }
+  textarea.field { resize: none; min-height: 60px; font-family: inherit; }
+  .btn {
+    border: none; border-radius: 10px; padding: 12px 16px;
+    font-size: 14px; font-weight: 800; letter-spacing: 1px; cursor: pointer;
+    text-transform: uppercase; transition: transform .1s, filter .2s; color: #04121a;
+  }
+  .btn:active { transform: scale(.96); }
+  .btn.primary { background: linear-gradient(90deg, var(--neon), var(--neon3)); color:#000; box-shadow: var(--shadow); }
+  .btn.ghost { background: transparent; border: 1px solid var(--border); color: var(--text); }
+
+  /* Bottom nav */
+  nav {
+    display: flex; border-top: 1px solid var(--border);
+    background: var(--bg2);
+  }
+  .navbtn {
+    flex: 1; padding: 12px 0 14px; background: transparent; border: none;
+    color: var(--muted); cursor: pointer; display: flex; flex-direction: column;
+    align-items: center; gap: 4px; font-size: 10px; letter-spacing: 1px; text-transform: uppercase;
+  }
+  .navbtn .ico { font-size: 20px; line-height: 1; }
+  .navbtn.active { color: var(--neon); }
+  .navbtn.active .ico { filter: drop-shadow(0 0 6px rgba(0,240,255,.7)); }
+
+  /* Chat */
+  .chatlog { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; padding-bottom: 10px; }
+  .msg { max-width: 85%; padding: 10px 14px; border-radius: 14px; font-size: 14px; line-height: 1.4; white-space: pre-wrap; word-break: break-word; }
+  .msg .when { display:block; font-size: 9px; color: #a9a9c4; margin-top: 5px; }
+  .msg.user { align-self: flex-end; background: linear-gradient(135deg, var(--neon3), var(--neon2)); color: #fff; border-bottom-right-radius: 4px; }
+  .msg.assistant { align-self: flex-start; background: var(--panel2); border: 1px solid var(--border); border-bottom-left-radius: 4px; }
+  .msg.system { align-self: center; background: rgba(57,255,136,.08); border: 1px solid rgba(57,255,136,.3); color: var(--green); font-size: 12px; }
+  .compose { display: flex; gap: 8px; padding-top: 10px; }
+  .compose .field { flex: 1; }
+  .empty { color: var(--muted); text-align: center; font-size: 13px; padding: 30px 0; font-style: italic; }
+
+  /* Memory */
+  .memstats { display: flex; gap: 8px; margin-bottom: 14px; }
+  .stat { flex: 1; background: var(--panel); border: 1px solid var(--border); border-radius: 12px; padding: 10px; text-align: center; }
+  .stat .n { font-size: 20px; font-weight: 900; }
+  .stat .l { font-size: 9px; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); }
+  .stat.total .n { color: var(--neon); } .stat.ego .n { color: var(--neon2); }
+  .stat.conscious .n { color: var(--neon3); } .stat.subcon .n { color: var(--green); }
+  .memrow { display:flex; align-items:center; gap:10px; background: var(--panel); border:1px solid var(--border); border-radius:10px; padding:9px 12px; margin-bottom:8px; }
+  .badge { font-size:9px; letter-spacing:1px; padding:3px 7px; border-radius:6px; text-transform:uppercase; font-weight:800; flex-shrink:0; }
+  .badge.EGO { background: rgba(255,45,149,.18); color: var(--neon2); }
+  .badge.CONSCIOUS { background: rgba(176,38,255,.18); color: var(--neon3); }
+  .badge.SUBCONSCIOUS { background: rgba(57,255,136,.15); color: var(--green); }
+  .mempt { flex:1; font-size:13px; word-break:break-word; }
+  .mempt small { display:block; color:var(--muted); font-size:10px; }
+  .tierpick { display:flex; gap:8px; margin:12px 0; }
+  .tierbtn { flex:1; padding:10px; background:var(--panel); border:1px solid var(--border); border-radius:10px; color:var(--text); cursor:pointer; font-size:11px; letter-spacing:1px; text-transform:uppercase; font-weight:800; }
+  .tierbtn[data-tier="EGO"].sel { background: rgba(255,45,149,.25); border-color: var(--neon2); color: var(--neon2); }
+  .tierbtn[data-tier="CONSCIOUS"].sel { background: rgba(176,38,255,.25); border-color: var(--neon3); color: var(--neon3); }
+  .tierbtn[data-tier="SUBCONSCIOUS"].sel { background: rgba(57,255,136,.2); border-color: var(--green); color: var(--green); }
+  .searchrow { margin-bottom:14px; }
+
+  /* Tasks */
+  .taskrow { display:flex; align-items:flex-start; gap:10px; background: var(--panel); border:1px solid var(--border); border-radius:10px; padding:11px 12px; margin-bottom:8px; }
+  .check { width:22px; height:22px; border-radius:6px; border:2px solid var(--border); cursor:pointer; flex-shrink:0; display:grid; place-items:center; font-size:13px; color:transparent; margin-top:1px; }
+  .check.done { background: var(--green); border-color: var(--green); color:#000; }
+  .taskbody { flex:1; }
+  .taskbody .t { font-size:14px; word-break:break-word; }
+  .taskbody .t.done { text-decoration: line-through; color: var(--muted); }
+  .taskbody .meta { font-size:10px; color:var(--muted); margin-top:4px; display:flex; gap:6px; flex-wrap:wrap; align-items:center; }
+  .pri { font-size:9px; font-weight:800; letter-spacing:1px; padding:2px 6px; border-radius:5px; text-transform:uppercase; }
+  .pri.LOW { color:var(--muted); border:1px solid var(--border); }
+  .pri.MEDIUM { color:var(--yellow); border:1px solid rgba(255,213,74,.4); }
+  .pri.HIGH { color:var(--neon2); border:1px solid rgba(255,45,149,.4); }
+  .pri.URGENT { color:var(--red); border:1px solid rgba(255,92,92,.5); background: rgba(255,92,92,.1); }
+  .del { background:none; border:none; color:var(--muted); cursor:pointer; font-size:16px; flex-shrink:0; }
+  .del:hover { color: var(--red); }
+  .taskops { display:flex; gap:8px; margin:12px 0; flex-wrap:wrap; align-items:center; }
+  .taskops .pripick { padding:8px; background:var(--panel); border:1px solid var(--border); border-radius:8px; color:var(--text); font-size:12px; }
+
+  /* Settings */
+  .card { background: var(--panel); border:1px solid var(--border); border-radius:12px; padding:14px; margin-bottom:12px; }
+  .card h3 { font-size:12px; letter-spacing:1px; text-transform:uppercase; color:var(--neon); margin-bottom:10px; }
+  .kv { display:flex; justify-content:space-between; gap:10px; padding:7px 0; border-bottom:1px dashed var(--border); font-size:13px; }
+  .kv:last-child { border-bottom:none; }
+  .kv .k { color:var(--muted); }
+  .kv .v { font-weight:700; word-break:break-word; text-align:right; }
+  .green { color: var(--green); } .pink { color: var(--neon2); } .cyan { color: var(--neon); }
+  .btn.danger { background: transparent; color: var(--red); border:1px solid rgba(255,92,92,.5); width:100%; margin-top:6px; }
+  input[type="datetime-local"] { color-scheme: dark; }
+  ::-webkit-scrollbar { width:6px; } ::-webkit-scrollbar-thumb { background: var(--border); border-radius:3px; }
+</style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <div class="logo">N</div>
+    <div>
+      <h1>Nyx Prime</h1>
+      <div class="sub">v1.0 · Web</div>
+    </div>
+  </header>
+
+  <main>
+    <!-- CHAT -->
+    <section id="tab-chat" class="tab active" data-name="Chat">
+      <div class="chatlog" id="chatlog"></div>
+      <div class="compose">
+        <textarea id="chat-input" class="field" placeholder="Message Nyx Prime..."></textarea>
+        <button id="chat-send" class="btn primary" style="min-width:72px">SEND</button>
+      </div>
+    </section>
+
+    <!-- MEMORY -->
+    <section id="tab-memory" class="tab" data-name="Memory">
+      <h2 class="section">Memory</h2>
+      <div class="memstats">
+        <div class="stat total"><div class="n" id="m-total">0</div><div class="l">TOTAL</div></div>
+        <div class="stat ego"><div class="n" id="m-ego">0</div><div class="l">EGO</div></div>
+        <div class="stat conscious"><div class="n" id="m-con">0</div><div class="l">CONSCIOUS</div></div>
+        <div class="stat subcon"><div class="n" id="m-sub">0</div><div class="l">SUBCON</div></div>
+      </div>
+      <div class="tierpick">
+        <button class="tierbtn" data-tier="EGO">EGO</button>
+        <button class="tierbtn" data-tier="CONSCIOUS">CONSCIOUS</button>
+        <button class="tierbtn" data-tier="SUBCONSCIOUS">SUBCON</button>
+      </div>
+      <textarea id="mem-input" class="field" placeholder="What should Nyx remember?"></textarea>
+      <div style="margin-top:10px"><button id="mem-store" class="btn primary" style="width:100%">STORE</button></div>
+      <div class="searchrow" style="margin-top:14px">
+        <input id="mem-search" class="field" placeholder="&#128269; Search memories...">
+      </div>
+      <div id="memlist"></div>
+    </section>
+
+    <!-- TASKS -->
+    <section id="tab-tasks" class="tab" data-name="Tasks">
+      <h2 class="section">Tasks</h2>
+      <input id="task-input" class="field" placeholder="New task title...">
+      <div class="taskops">
+        <select id="task-pri" class="pripick">
+          <option value="LOW">LOW</option>
+          <option value="MEDIUM" selected>MEDIUM</option>
+          <option value="HIGH">HIGH</option>
+          <option value="URGENT">URGENT</option>
+        </select>
+        <input id="task-due" type="datetime-local" class="pripick" style="flex:1">
+      </div>
+      <div style="margin-bottom:14px"><button id="task-add" class="btn primary" style="width:100%">ADD</button></div>
+      <h2 class="section">Active <span id="active-count">0</span></h2>
+      <div id="tasklist"></div>
+    </section>
+
+    <!-- SETTINGS -->
+    <section id="tab-settings" class="tab" data-name="Settings">
+      <h2 class="section">System Config</h2>
+      <div class="card">
+        <h3>Agent</h3>
+        <div class="kv"><span class="k">Name</span><span class="v cyan">Nyx Prime</span></div>
+        <div class="kv"><span class="k">Version</span><span class="v" id="s-ver">Web v1.0</span></div>
+        <div class="kv"><span class="k">Platform</span><span class="v">Web / GitHub Pages</span></div>
+        <div class="kv"><span class="k">Data Source</span><span class="v green">Web (localStorage)</span></div>
+        <div class="kv"><span class="k">Storage Status</span><span class="v green" id="s-status">READY</span></div>
+      </div>
+      <div class="card">
+        <h3>Data</h3>
+        <div class="kv"><span class="k">Chat Messages</span><span class="v" id="s-msgs">0</span></div>
+        <div class="kv"><span class="k">Memories</span><span class="v" id="s-mems">0</span></div>
+        <div class="kv"><span class="k">Tasks</span><span class="v" id="s-tasks">0</span></div>
+      </div>
+      <div class="card">
+        <h3>Memory Tiers (Android parity)</h3>
+        <div class="kv"><span class="k">EGO</span><span class="v pink">Short-term · personality</span></div>
+        <div class="kv"><span class="k">CONSCIOUS</span><span class="v cyan">Medium-term · active</span></div>
+        <div class="kv"><span class="k">SUBCONSCIOUS</span><span class="v">Long-term · high volume</span></div>
+      </div>
+      <button id="clear-all" class="btn danger">CLEAR ALL LOCAL DATA</button>
+      <div style="text-align:center;margin-top:14px;font-size:11px;color:var(--muted)">
+        Nyx Prime · SOETech · data stored locally in your browser
+      </div>
+    </section>
+  </main>
+
+  <nav id="nav">
+    <button class="navbtn active" data-tab="chat"><span class="ico">💬</span>Chat</button>
+    <button class="navbtn" data-tab="memory"><span class="ico">🧠</span>Memory</button>
+    <button class="navbtn" data-tab="tasks"><span class="ico">✅</span>Tasks</button>
+    <button class="navbtn" data-tab="settings"><span class="ico">⚙️</span>Settings</button>
+  </nav>
+</div>
+
+<script>
+(function(){
+  'use strict';
+  var KEYS = { chat:'nyx_chat', mem:'nyx_memory', task:'nyx_tasks', meta:'nyx_meta' };
+  var TIERS = ['EGO','CONSCIOUS','SUBCONSCIOUS'];
+  var ROLE = ['USER','ASSISTANT','SYSTEM'];
+
+  function load(k, def){ try { var v = localStorage.getItem(k); return v ? JSON.parse(v) : def; } catch(e){ return def; } }
+  function save(k, v){ localStorage.setItem(k, JSON.stringify(v)); }
+  function uid(){ return Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
+  function esc(s){ return String(s).replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
+  function stamp(){ return new Date().toLocaleString([], {month:'short', day:'numeric', hour:'2-digit', minute:'2-digit'}); }
+
+  var chat = load(KEYS.chat, []);
+  var mems = load(KEYS.mem, []);
+  var tasks = load(KEYS.task, []);
+
+  // If nothing stored, seed a welcome message + representative demo memory so the app feels alive.
+  if (chat.length === 0){
+    chat.push({id:uid(), role:'SYSTEM', content:'Nyx Prime online. Data source: Web (localStorage).', ts:Date.now()});
+    chat.push({id:uid(), role:'ASSISTANT', content:'Hello. I am Nyx Prime. This is the browser build for testing while the Android APK is being fixed. Type a message below and press SEND.', ts:Date.now()});
+    save(KEYS.chat, chat);
+  }
+  if (mems.length === 0){
+    mems.push({id:uid(), tier:'EGO', content:'Self-identity: Nyx Prime — cyberpunk companion agent by SOETech.', ts:Date.now(), cnt:1});
+    mems.push({id:uid(), tier:'CONSCIOUS', content:'Web build deployed for browser testing (v1.0).', ts:Date.now(), cnt:1});
+    save(KEYS.mem, mems);
+  }
+
+  var selTier = 'EGO';
+  var selPri = 'MEDIUM';
+  var currentTab = 'chat';
+
+  /* ---------- Navigation ---------- */
+  document.querySelectorAll('.navbtn').forEach(function(b){
+    b.addEventListener('click', function(){
+      switchTab(this.dataset.tab);
+    });
+  });
+  function switchTab(name){
+    currentTab = name;
+    document.querySelectorAll('.tab').forEach(function(t){ t.classList.toggle('active', t.id === 'tab-'+name); });
+    document.querySelectorAll('.navbtn').forEach(function(b){ b.classList.toggle('active', b.dataset.tab === name); });
+    refreshAll(name);
+  }
+
+  /* ---------- Chat ---------- */
+  function renderChat(){
+    var el = document.getElementById('chatlog');
+    if (!chat.length){ el.innerHTML = '<div class="empty">No messages yet.</div>'; return; }
+    el.innerHTML = chat.map(function(m){
+      var role = ROLE[m.role] || m.role || 'USER';
+      var cls = role.toLowerCase();
+      return '<div class="msg '+cls+'">'+esc(m.content)+'<span class="when">'+stamp()+'</span></div>';
+    }).join('');
+    el.scrollTop = el.scrollHeight;
+  }
+  function sendChat(){
+    var inp = document.getElementById('chat-input');
+    var text = inp.value.trim();
+    if (!text) return;
+    chat.push({id:uid(), role:'USER', content:text, ts:Date.now()});
+    save(KEYS.chat, chat);
+    inp.value = '';
+    renderChat();
+    // Local demo reply — Nyx acknowledges (offline build, no LLM backend).
+    setTimeout(function(){
+      chat.push({id:uid(), role:'ASSISTANT', content:'Received. This is the local web build, so I respond from stored context rather than a live model. (Fix the APK and I\'ll be fully online.)', ts:Date.now()});
+      save(KEYS.chat, chat);
+      renderChat();
+    }, 350);
+  }
+  document.getElementById('chat-send').addEventListener('click', sendChat);
+  document.getElementById('chat-input').addEventListener('keydown', function(e){
+    if (e.key === 'Enter' && !e.shiftKey){ e.preventDefault(); sendChat(); }
+  });
+
+  /* ---------- Memory ---------- */
+  function memStats(){
+    return { total: mems.length,
+      EGO: mems.filter(function(m){return m.tier==='EGO';}).length,
+      CONSCIOUS: mems.filter(function(m){return m.tier==='CONSCIOUS';}).length,
+      SUBCONSCIOUS: mems.filter(function(m){return m.tier==='SUBCONSCIOUS';}).length };
+  }
+  function storeMem(){
+    var inp = document.getElementById('mem-input');
+    var text = inp.value.trim();
+    if (!text) return;
+    mems.unshift({id:uid(), tier:selTier, content:text, ts:Date.now(), cnt:1});
+    save(KEYS.mem, mems);
+    inp.value = '';
+    renderMem(); renderMemoryStats();
+  }
+  function renderMemoryStats(){
+    var s = memStats();
+    document.getElementById('m-total').textContent = s.total;
+    document.getElementById('m-ego').textContent = s.EGO;
+    document.getElementById('m-con').textContent = s.CONSCIOUS;
+    document.getElementById('m-sub').textContent = s.SUBCONSCIOUS;
+  }
+  function renderMem(){
+    var q = document.getElementById('mem-search').value.trim().toLowerCase();
+    var list = mems;
+    if (q) list = mems.filter(function(m){ return m.content.toLowerCase().indexOf(q) !== -1 || m.tier.toLowerCase().indexOf(q) !== -1; });
+    var el = document.getElementById('memlist');
+    if (!list.length){ el.innerHTML = '<div class="empty">'+(q?'No matching memories.':'No memories stored.')+'</div>'; return; }
+    el.innerHTML = list.map(function(m){
+      return '<div class="memrow">'+
+        '<span class="badge '+m.tier+'">'+(m.tier||'CONSCIOUS')+'</span>'+
+        '<span class="mempt">'+esc(m.content)+'<small>'+stamp()+' · accessed '+m.cnt+'×</small></span>'+
+        '<button class="del" data-delmem="'+m.id+'" title="delete">✕</button></div>';
+    }).join('');
+    el.querySelectorAll('[data-delmem]').forEach(function(btn){
+      btn.addEventListener('click', function(){
+        mems = mems.filter(function(m){ return m.id !== btn.dataset.delmem; });
+        save(KEYS.mem, mems); renderMem(); renderMemoryStats();
+      });
+    });
+  }
+  document.getElementById('mem-store').addEventListener('click', storeMem);
+  document.getElementById('mem-input').addEventListener('keydown', function(e){ if(e.key==='Enter' && !e.shiftKey){ e.preventDefault(); storeMem(); } });
+  document.getElementById('mem-search').addEventListener('input', renderMem);
+  document.querySelectorAll('.tierbtn').forEach(function(b){
+    b.addEventListener('click', function(){
+      selTier = b.dataset.tier;
+      document.querySelectorAll('.tierbtn').forEach(function(x){ x.classList.toggle('sel', x===b); });
+    });
+  });
+
+  /* ---------- Tasks ---------- */
+  function addTask(){
+    var inp = document.getElementById('task-input');
+    var text = inp.value.trim();
+    if (!text) return;
+    var due = document.getElementById('task-due').value;
+    tasks.unshift({id:uid(), title:text, priority:selPri, status:'PENDING', due: due||null, done:false, ts:Date.now()});
+    save(KEYS.task, tasks);
+    inp.value = '';
+    renderTasks();
+  }
+  function toggleTask(id){
+    var t = tasks.find(function(x){ return x.id===id; });
+    if (t){ t.done = !t.done; t.status = t.done ? 'COMPLETED' : 'PENDING'; save(KEYS.task, tasks); renderTasks(); }
+  }
+  function deleteTask(id){
+    tasks = tasks.filter(function(x){ return x.id!==id; });
+    save(KEYS.task, tasks); renderTasks();
+  }
+  function renderTasks(){
+    var active = tasks.filter(function(t){ return !t.done; });
+    var done = tasks.filter(function(t){ return t.done; });
+    document.getElementById('active-count').textContent = active.length;
+    function row(t){
+      var dueTxt = t.due ? '<span>· due '+new Date(t.due).toLocaleString([],{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'})+'</span>' : '';
+      return '<div class="taskrow">'+
+        '<div class="check'+(t.done?' done':'')+'" data-tog="'+t.id+'">✓</div>'+
+        '<div class="taskbody"><div class="t'+(t.done?' done':'')+'">'+esc(t.title)+'</div>'+
+        '<div class="meta"><span class="pri '+t.priority+'">'+t.priority+'</span>'+dueTxt+'</div></div>'+
+        '<button class="del" data-delt="'+t.id+'">✕</button></div>';
+    }
+    var html = active.map(row).join('') + (done.length ? '<div style="margin:14px 0 8px;font-size:11px;color:var(--muted);letter-spacing:1px;text-transform:uppercase">Completed</div>' + done.map(row).join('') : '');
+    document.getElementById('tasklist').innerHTML = html || '<div class="empty">No tasks. Add one above.</div>';
+    document.querySelectorAll('[data-tog]').forEach(function(el){ el.addEventListener('click', function(){ toggleTask(el.dataset.tog); }); });
+    document.querySelectorAll('[data-delt]').forEach(function(el){ el.addEventListener('click', function(){ deleteTask(el.dataset.delt); }); });
+  }
+  document.getElementById('task-add').addEventListener('click', addTask);
+  document.getElementById('task-input').addEventListener('keydown', function(e){ if(e.key==='Enter'){ e.preventDefault(); addTask(); } });
+  document.getElementById('task-pri').addEventListener('change', function(e){ selPri = e.target.value; });
+
+  /* ---------- Settings ---------- */
+  function refreshSettings(){
+    document.getElementById('s-msgs').textContent = chat.length;
+    document.getElementById('s-mems').textContent = mems.length;
+    document.getElementById('s-tasks').textContent = tasks.length;
+    document.getElementById('s-status').textContent = 'READY · ' + (localStorage.length) + ' keys';
+  }
+  document.getElementById('clear-all').addEventListener('click', function(){
+    if (confirm('Clear ALL Nyx Prime web data? This cannot be undone.')){
+      ['nyx_chat','nyx_memory','nyx_tasks','nyx_meta'].forEach(function(k){ localStorage.removeItem(k); });
+      chat=[]; mems=[]; tasks=[];
+      // re-seed welcome
+      chat.push({id:uid(), role:'SYSTEM', content:'Nyx Prime online. Data source: Web (localStorage).', ts:Date.now()});
+      chat.push({id:uid(), role:'ASSISTANT', content:'All local data cleared. Nyx Prime reset complete.', ts:Date.now()});
+      save(KEYS.chat, chat);
+      refreshAll(currentTab);
+    }
+  });
+
+  /* ---------- Aggregated refresh ---------- */
+  function refreshAll(tab){
+    if (tab === 'chat') renderChat();
+    if (tab === 'memory'){ renderMemoryStats(); renderMem(); }
+    if (tab === 'tasks') renderTasks();
+    if (tab === 'settings') refreshSettings();
+  }
+
+  // Init: select EGO tier visually and render the default tab.
+  document.querySelector('.tierbtn[data-tier="EGO"]').classList.add('sel');
+  switchTab('chat');
+})();
+</script>
+</body>
+</html>
