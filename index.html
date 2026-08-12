@@ -276,6 +276,46 @@
   var TIERS = ['EGO','CONSCIOUS','SUBCONSCIOUS'];
   var ROLE = ['USER','ASSISTANT','SYSTEM'];
 
+  // ── Nyx Prime live agent connection ─────────────────────────────
+  // Points at the Nyx Prime relay (tunnel -> local hermes `chat -q`).
+  // Relays real messages to the Nyx agent and returns real responses.
+  var NYX_RELAY_URL = 'https://88dd5b1c00b9fc.lhr.life/chat'; // POST {message, userId, history}
+  var NYX_RELAY_TOKEN = 'Fsn_AsgtSuSCV707oVrsCPCiZ62M9drJ';   // X-Api-Token header
+  var NYX_RELAY_TIMEOUT_MS = 90000;                            // Nyx can take ~10-60s to reply
+
+  function getUserId(){
+    var u = localStorage.getItem('nyx_user_id');
+    if (!u){ u = 'web-' + Date.now().toString(36) + Math.random().toString(36).slice(2,6); localStorage.setItem('nyx_user_id', u); }
+    return u;
+  }
+  // Non-blocking fire-and-forget DELETE of a local message id (used to remove
+  // the optimistic "…" bubble). Kept minimal — the UI handles it inline instead.
+  function relayHistory(){
+    return chat.slice(-10).filter(function(m){ return m.role === 0 || m.role === 1; }).map(function(m){
+      return { role: (m.role === 0 ? 'user' : 'assistant'), content: m.content };
+    });
+  }
+  function callNyx(text, onOk, onErr){
+    var ctrl = typeof AbortController !== 'undefined' ? new AbortController() : null;
+    var timer = ctrl ? setTimeout(function(){ try { ctrl.abort(); } catch(e){} }, NYX_RELAY_TIMEOUT_MS) : null;
+    fetch(NYX_RELAY_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'X-Api-Token': NYX_RELAY_TOKEN },
+      body: JSON.stringify({ message: text, userId: getUserId(), history: relayHistory() }),
+      signal: ctrl ? ctrl.signal : undefined
+    })
+    .then(function(r){ if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+    .then(function(data){
+      if (timer) clearTimeout(timer);
+      if (data && typeof data.response === 'string' && data.response.trim()) onOk(data.response.trim());
+      else onErr(new Error('Empty response from Nyx'));
+    })
+    .catch(function(e){
+      if (timer) clearTimeout(timer);
+      onErr(e);
+    });
+  }
+
   function load(k, def){ try { var v = localStorage.getItem(k); return v ? JSON.parse(v) : def; } catch(e){ return def; } }
   function save(k, v){ localStorage.setItem(k, JSON.stringify(v)); }
   function uid(){ return Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
@@ -283,7 +323,7 @@
   function stamp(){ return new Date().toLocaleString([], {month:'short', day:'numeric', hour:'2-digit', minute:'2-digit'}); }
 
   // Live relay endpoint (Nyx Prime API). Overridable in Settings; stored in localStorage.
-  var DEFAULT_API_URL = 'https://nyx-prime-api.onrender.com';
+  var DEFAULT_API_URL = 'https://cd1a11b6f799e0.lhr.life';
   var API_URL = (localStorage.getItem('nyx_api') || '').trim() || DEFAULT_API_URL;
   var API_ONLINE = false; // flips true on first successful call
 
