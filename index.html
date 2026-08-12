@@ -408,7 +408,7 @@
     return fetch(API_URL + '/chat', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ message: text, history: chat.filter(function(m){return m.role!=='SYSTEM'}).slice(-8).map(function(m){return {role:(m.role==='USER'?'user':'assistant'), content:m.content};}) })
+      body: JSON.stringify({ message: text, token: 'Fsn_AsgtSuSCV707oVrsCPCiZ62M9drJ', history: chat.filter(function(m){return m.role!=='SYSTEM'}).slice(-8).map(function(m){return {role:(m.role==='USER'?'user':'assistant'), content:m.content};}) })
     }).then(function(r){ if (!r.ok) throw new Error('HTTP '+r.status); return r.json(); })
       .then(function(d){ var c = d && d.message && (d.message.content||'').trim(); if (!c) throw new Error('empty reply'); API_ONLINE = true; return c; });
   }
