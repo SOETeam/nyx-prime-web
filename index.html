@@ -247,6 +247,13 @@
         <div class="kv"><span class="k">CONSCIOUS</span><span class="v cyan">Medium-term · active</span></div>
         <div class="kv"><span class="k">SUBCONSCIOUS</span><span class="v">Long-term · high volume</span></div>
       </div>
+      <div class="card">
+        <h3>Nyx API Relay</h3>
+        <div class="kv"><span class="k">Status</span><span class="v" id="s-api">—</span></div>
+        <div class="kv"><span class="k">Endpoint</span><span class="v" id="s-apiurl">—</span></div>
+        <input id="api-input" class="field" style="margin-top:10px" placeholder="https://nyx-prime-api.onrender.com">
+        <button id="api-save" class="btn ghost" style="width:100%;margin-top:8px">SAVE API URL</button>
+      </div>
       <button id="clear-all" class="btn danger">CLEAR ALL LOCAL DATA</button>
       <div style="text-align:center;margin-top:14px;font-size:11px;color:var(--muted)">
         Nyx Prime · SOETech · data stored locally in your browser
@@ -274,6 +281,11 @@
   function uid(){ return Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
   function esc(s){ return String(s).replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
   function stamp(){ return new Date().toLocaleString([], {month:'short', day:'numeric', hour:'2-digit', minute:'2-digit'}); }
+
+  // Live relay endpoint (Nyx Prime API). Overridable in Settings; stored in localStorage.
+  var DEFAULT_API_URL = 'https://nyx-prime-api.onrender.com';
+  var API_URL = (localStorage.getItem('nyx_api') || '').trim() || DEFAULT_API_URL;
+  var API_ONLINE = false; // flips true on first successful call
 
   var chat = load(KEYS.chat, []);
   var mems = load(KEYS.mem, []);
@@ -326,13 +338,39 @@
     chat.push({id:uid(), role:'USER', content:text, ts:Date.now()});
     save(KEYS.chat, chat);
     inp.value = '';
+    inp.disabled = true;
+    document.getElementById('chat-send').disabled = true;
     renderChat();
-    // Local demo reply — Nyx acknowledges (offline build, no LLM backend).
-    setTimeout(function(){
-      chat.push({id:uid(), role:'ASSISTANT', content:'Received. This is the local web build, so I respond from stored context rather than a live model. (Fix the APK and I\'ll be fully online.)', ts:Date.now()});
+    pushAssistant('…'); // placeholder while waiting
+    callApi(text).then(function(reply){
+      popPlaceholder();
+      chat.push({id:uid(), role:'ASSISTANT', content:reply, ts:Date.now()});
       save(KEYS.chat, chat);
       renderChat();
-    }, 350);
+    }).catch(function(){
+      popPlaceholder();
+      // Offline / API not deployed: local fallback so chat still responds.
+      chat.push({id:uid(), role:'ASSISTANT', content:'Received. (Nyx API unreachable — set the API URL in Settings, or this is the offline fallback.)', ts:Date.now()});
+      save(KEYS.chat, chat);
+      renderChat();
+    }).finally(function(){
+      inp.disabled = false;
+      document.getElementById('chat-send').disabled = false;
+    });
+  }
+
+  // "…" placeholder helper: keep index of it in the chat array.
+  var phIdx = -1;
+  function pushAssistant(content){ phIdx = chat.push({id:uid(), role:'ASSISTANT', content:content, ts:Date.now()}) - 1; save(KEYS.chat, chat); renderChat(); }
+  function popPlaceholder(){ if (phIdx >= 0){ chat = chat.filter(function(_,i){return i!==phIdx;}); phIdx = -1; save(KEYS.chat, chat); } }
+
+  function callApi(text){
+    return fetch(API_URL + '/chat', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message: text, history: chat.filter(function(m){return m.role!=='SYSTEM'}).slice(-8).map(function(m){return {role:(m.role==='USER'?'user':'assistant'), content:m.content};}) })
+    }).then(function(r){ if (!r.ok) throw new Error('HTTP '+r.status); return r.json(); })
+      .then(function(d){ var c = d && d.message && (d.message.content||'').trim(); if (!c) throw new Error('empty reply'); API_ONLINE = true; return c; });
   }
   document.getElementById('chat-send').addEventListener('click', sendChat);
   document.getElementById('chat-input').addEventListener('keydown', function(e){
@@ -436,8 +474,18 @@
     document.getElementById('s-msgs').textContent = chat.length;
     document.getElementById('s-mems').textContent = mems.length;
     document.getElementById('s-tasks').textContent = tasks.length;
-    document.getElementById('s-status').textContent = 'READY · ' + (localStorage.length) + ' keys';
+    document.getElementById('s-api').textContent = API_ONLINE ? 'ONLINE (live Nyx)' : (API_URL===DEFAULT_API_URL ? 'UNCONFIGURED (fallback)' : 'WAITING');
+    document.getElementById('s-api').className = 'v ' + (API_ONLINE ? 'green' : (API_URL===DEFAULT_API_URL ? 'pink' : 'cyan'));
+    document.getElementById('s-apiurl').textContent = API_URL + (API_URL===DEFAULT_API_URL ? ' ⚠ default — set yours' : '');
+    document.getElementById('api-input').value = API_URL;
   }
+  document.getElementById('api-save').addEventListener('click', function(){
+    var v = document.getElementById('api-input').value.trim();
+    if (!v) { localStorage.removeItem('nyx_api'); }
+    else { localStorage.setItem('nyx_api', v.replace(/\/+$/, '')); }
+    API_URL = (localStorage.getItem('nyx_api') || '').trim() || DEFAULT_API_URL;
+    refreshSettings();
+  });
   document.getElementById('clear-all').addEventListener('click', function(){
     if (confirm('Clear ALL Nyx Prime web data? This cannot be undone.')){
       ['nyx_chat','nyx_memory','nyx_tasks','nyx_meta'].forEach(function(k){ localStorage.removeItem(k); });
