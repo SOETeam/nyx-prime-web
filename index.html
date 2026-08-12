@@ -323,7 +323,7 @@
   function stamp(){ return new Date().toLocaleString([], {month:'short', day:'numeric', hour:'2-digit', minute:'2-digit'}); }
 
   // Live relay endpoint (Nyx Prime API). Overridable in Settings; stored in localStorage.
-  var DEFAULT_API_URL = 'https://cd1a11b6f799e0.lhr.life';
+  var DEFAULT_API_URL = 'https://d1492d5068ee27.lhr.life';
   var API_URL = (localStorage.getItem('nyx_api') || '').trim() || DEFAULT_API_URL;
   var API_ONLINE = false; // flips true on first successful call
 
