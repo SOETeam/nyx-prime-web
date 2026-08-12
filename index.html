@@ -165,7 +165,55 @@
 </style>
 </head>
 <body>
-<div id="app">
+
+<!-- Passcode Protection -->
+<div id="passcode-overlay" style="position:fixed;top:0;left:0;right:0;bottom:0;background:#0a0a1a;z-index:9999;display:flex;align-items:center;justify-content:center;flex-direction:column;">
+  <div style="text-align:center;padding:40px;">
+    <div style="font-size:48px;margin-bottom:20px;">🔐</div>
+    <h2 style="color:#00ffff;font-family:monospace;margin-bottom:20px;">NYX PRIME - ACCESS REQUIRED</h2>
+    <input type="password" id="passcode-input" placeholder="Enter passcode..." 
+           style="background:#000;border:2px solid #00ffff;color:#00ffff;padding:15px;font-size:18px;font-family:monospace;width:300px;text-align:center;margin-bottom:20px;">
+    <br>
+    <button onclick="checkPasscode()" style="background:#00ffff;color:#000;border:none;padding:15px 40px;font-size:18px;font-family:monospace;cursor:pointer;font-weight:bold;">UNLOCK</button>
+    <p id="passcode-error" style="color:#ff0066;margin-top:10px;display:none;">ACCESS DENIED</p>
+  </div>
+</div>
+
+<script>
+var PASSCODE = "so mote it be";
+var STORAGE_KEY = "nyx_prime_unlocked";
+
+function checkPasscode() {
+  var input = document.getElementById("passcode-input").value;
+  if (input === PASSCODE) {
+    localStorage.setItem(STORAGE_KEY, "true");
+    document.getElementById("passcode-overlay").style.display = "none";
+    document.getElementById("app").style.display = "flex";
+  } else {
+    document.getElementById("passcode-error").style.display = "block";
+    document.getElementById("passcode-input").value = "";
+    document.getElementById("passcode-input").style.borderColor = "#ff0066";
+    setTimeout(function() {
+      document.getElementById("passcode-input").style.borderColor = "#00ffff";
+      document.getElementById("passcode-error").style.display = "none";
+    }, 2000);
+  }
+}
+
+// Check if already unlocked
+window.onload = function() {
+  if (localStorage.getItem(STORAGE_KEY) === "true") {
+    document.getElementById("passcode-overlay").style.display = "none";
+    document.getElementById("app").style.display = "flex";
+  }
+  // Handle enter key
+  document.getElementById("passcode-input").addEventListener("keydown", function(e) {
+    if (e.key === "Enter") checkPasscode();
+  });
+};
+</script>
+
+<div id="app" style="display:none;">
   <header>
     <div class="logo">N</div>
     <div>
